@@ -14,7 +14,7 @@ const generateAccessAndRefreshTokens = async (userId) => {
     await user.save({ validateBeforeSave: false });
     return { accessToken, refreshToken };
   } catch (error) {
-    throw new ApiError(500, "Something went wrong while generating token");
+    throw new ApiError(500, error.message || "Something went wrong while generating token");
   }
 };
 
@@ -30,56 +30,69 @@ const registerUser = asyncHandler(async (req, res) => {
   // check for user creation
   // return response
 
-  const { username, email, fullName, password } = req.body;
-  if (
-    [username, email, fullName, password].some((field) => field?.trim() === "")
-  ) {
-    throw new ApiError(400, "All fields are required");
-  }
-  const emailValidation = !email?.includes("@");
-  if (emailValidation) {
-    throw new ApiError(400, "Email is not correct");
-  }
-  const existedUser = await User.findOne({
-    $or: [{ username }, { email }],
-  });
-  if (existedUser) {
-    throw new ApiError(409, "Username or Email already exists");
-  }
-  console.log("req.files is",req.files)
-  const avatarLocalPath = req.files?.avatar[0]?.path;
-  console.log(avatarLocalPath);
+  try {
+    const { username, email, fullName, password } = req.body;
 
-  const coverImageLocalPath = req.files?.coverImage[0]?.path;
-  if (!avatarLocalPath) {
-    throw new ApiError(400, "Avatar file is required");
+    if (
+      [username, email, fullName, password].some(
+        (field) => field?.trim() === ""
+      )
+    ) {
+      throw new ApiError(400, "All fields are required");
+    }
+    const emailValidation = !email?.includes("@");
+    if (emailValidation) {
+      throw new ApiError(400, "Email is not correct");
+    }
+    const existedUser = await User.findOne({
+      $or: [{ username }, { email }],
+    });
+    if (existedUser) {
+      throw new ApiError(409, "Username or Email already exists");
+    }
+    const avatarLocalPath = req.files?.avatar[0]?.path;
+    if (!avatarLocalPath) {
+      throw new ApiError(400, "Avatar file is required");
+    }
+    let coverImageLocalPath;
+    if (
+      req.files &&
+      Array.isArray(req.files.coverImage) &&
+      req.files.coverImage.length > 0
+    ) {
+      coverImageLocalPath = req.files.coverImage[0].path;
+    }
+    const avatar = await uploadOnCloudinary(avatarLocalPath);
+    const coverImage = await uploadOnCloudinary(coverImageLocalPath);
+    if (!avatar) {
+      throw new ApiError("409", "Avatar file is required");
+    }
+    const user = await User.create({
+      fullName,
+      avatar: avatar.url,
+      coverImage: coverImage?.url || "",
+      email,
+      password,
+      username: username.toLowerCase(),
+    });
+    const createdUser = await User.findById(user._id).select(
+      "-password -refreshToken"
+    );
+    if (!createdUser) {
+      throw new ApiError(
+        500,
+        "Something went wrong while registering the user"
+      );
+    }
+    return res
+      .status(201)
+      .json(new ApiResponse(200, createdUser, "User Registered Successfully"));
+  } catch (error) {
+    throw new ApiError(400, error.message || "Invalid user registeration");
   }
-  const avatar = await uploadOnCloudinary(avatarLocalPath);
-  console.log(avatar);
-  const coverImage = await uploadOnCloudinary(coverImageLocalPath);
-  if (!avatar) {
-    throw new ApiError("409", "Avatar file is required");
-  }
-  const user = await User.create({
-    fullName,
-    avatar: avatar.url,
-    coverImage: coverImage?.url || "",
-    email,
-    password,
-    username: username.toLowerCase(),
-  });
-  const createdUser = await User.findById(user._id).select(
-    "-password -refreshToken"
-  );
-  if (!createdUser) {
-    throw new ApiError(500, "Something went wrong while registering the user");
-  }
-  return res
-    .status(201)
-    .json(new ApiResponse(200, createdUser, "User Registered Successfully"));
 });
 
-const loginUser = asyncHandler(async () => {
+const loginUser = asyncHandler(async (req,res) => {
   // receve data from user i.e username, email, password
   //check if email and user name is provided
   // find user from db from email and password
@@ -104,7 +117,7 @@ const loginUser = asyncHandler(async () => {
     throw new ApiError(401, "User credentials are not valid");
   }
   const { accessToken, refreshToken } =
-    await generateAccessAndRefreshTokens(user_id);
+    await generateAccessAndRefreshTokens(user._id);
   const loggedInUser = await User.findById(user._id).select(
     "-password -refreshToken"
   );
