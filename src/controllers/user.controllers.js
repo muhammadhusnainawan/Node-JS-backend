@@ -1,10 +1,9 @@
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { ApiError } from "../utils/ApiError.js";
 import { User } from "../models/user.models.js";
-import { uploadOnCloudinary } from "../utils/cloudinary.js";
+import { delFromCloudinary, uploadOnCloudinary } from "../utils/cloudinary.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import jwt from "jsonwebtoken";
-import { json } from "express";
 
 const generateAccessAndRefreshTokens = async (userId) => {
   try {
@@ -267,6 +266,15 @@ const updateUserAvatar = asyncHandler(async (req, res) => {
   if (!avatar.url) {
     throw new ApiError(400, "Error while uploading avatar");
   }
+  const OldAvatarUrl = req.user?.avatar;
+  const splitForId = OldAvatarUrl.split("/");
+  const idSplitted = splitForId[splitForId.length - 1];
+  const dotIndexOfidSplitted = idSplitted.indexOf(".");
+  let id;
+  if (dotIndexOfidSplitted !== -1) {
+    id = idSplitted.slice(0, dotIndexOfParts);
+  }
+  const delOldAvatar = await delFromCloudinary(id);
   const user = await User.findByIdAndUpdate(
     req.user?._id,
     {
@@ -290,6 +298,19 @@ const updateUserCoverImage = asyncHandler(async (req, res) => {
   if (!coverImage) {
     throw new ApiError(400, "Error while uploading cover Image");
   }
+
+  if (req.user?.coverImage) {
+    const OldCoverImageUrl = req.user?.coverImage;
+    const splitForId = OldCoverImageUrl.split("/");
+    const idSplitted = splitForId[splitForId.length - 1];
+    const dotIndexOfidSplitted = idSplitted.indexOf(".");
+    let id;
+    if (dotIndexOfidSplitted !== -1) {
+      id = idSplitted.slice(0, dotIndexOfParts);
+    }
+    const delOldCoverImage = await delFromCloudinary(id);
+  }
+
   const user = await User.findByIdAndUpdate(
     req.user._id,
     {
@@ -305,6 +326,30 @@ const updateUserCoverImage = asyncHandler(async (req, res) => {
     .json(new ApiResponse(200, user, "Cover image updated successfully"));
 });
 
+const getUserChannelProfile = asyncHandler(async () => {
+  const { username } = req.params;
+
+  if (!username?.trim()) {
+    throw new ApiError(400, "Username is missing");
+  }
+
+  const channel = await User.aggregate([
+    {
+      $match: {
+        username: username?.toLowerCase,
+      },
+    },
+    {
+      $lookup: {
+        from: subscriptions,
+        localField: "._id",
+        foreignField: "channel",
+        as: "subscribers"
+      }
+    }
+  ]);
+});
+
 export {
   registerUser,
   loginUser,
@@ -315,4 +360,5 @@ export {
   updateAccountDetails,
   updateUserAvatar,
   updateUserCoverImage,
+  getUserChannelProfile,
 };
