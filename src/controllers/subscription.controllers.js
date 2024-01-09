@@ -9,11 +9,11 @@ const toggleSubscription = asyncHandler(async (req, res) => {
   if (!channelId.trim()) {
     throw new ApiError(400, "Channel id not found");
   }
-  const channel = await User.findById(channelId);
+  let channel = await User.findById(channelId);
   if (!channel) {
     throw new ApiError(400, "Channel not found");
   }
-  const subscriber = req.user;
+  let subscriber = req.user;
   if (!subscriber) {
     throw new ApiError(400, "No logged in user found");
   }
@@ -26,18 +26,14 @@ const toggleSubscription = asyncHandler(async (req, res) => {
   const subscription = await Subscription.create({
     subscriber,
     channel,
-  });
-
-  const createdSubscripton = await Subscription.findById(subscription._id);
-
+  }).select("+subscriber.username");
+  if (!subscription) {
+    throw new ApiError(500, "Error while subscribing the channel");
+  }
   return res
     .status(200)
     .json(
-      new ApiResponse(
-        200,
-        createdSubscripton,
-        "Subscription created successfully"
-      )
+      new ApiResponse(200, subscription, "Subscription created successfully")
     );
 });
 
