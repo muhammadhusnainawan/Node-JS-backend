@@ -12,26 +12,16 @@ const toggleSubscription = asyncHandler(async (req, res) => {
   }
   console.log(channelId);
   const isSubscribed = Subscription.findOne({
-    $and: [
-      { subscriber: new mongoose.Types.ObjectId(req.user?._id) },
-      { channel: new mongoose.Types.ObjectId(channelId) },
-    ],
+    $and: [{ subscriber: req.user?._id }, { channel: channelId }],
   });
-  console.log(typeof isSubscribed);
-  if (!isSubscribed) {
-    const subscription = await Subscription.create({
-      subscriber: new mongoose.Types.ObjectId(req.user?._id),
-      channel: new mongoose.Types.ObjectId(channelId),
+  console.log(isSubscribed._id);
+  if (isSubscribed) {
+    await Subscription.findByIdAndDelete(isSubscribed?._id);
+  } else {
+    const subscriptio = await Subscription.create({
+      subscriber: req.user?._id,
+      channel: req.params._id,
     });
-    console.log(subscription);
-    if (!subscription) {
-      throw new ApiError(
-        500,
-        "Something went wrong while toggling subscription"
-      );
-    } else {
-      await Subscription.findByIdAndDelete(isSubscribed._id);
-    }
   }
   return res
     .status(200)
@@ -41,13 +31,13 @@ const toggleSubscription = asyncHandler(async (req, res) => {
 });
 
 // controller to get subsribers list of channel
-const getUserChannelSubscribers = asyncHandler(async () => {
+const getUserChannelSubscribers = asyncHandler(async (req, res) => {
   const { channelId } = req.params;
 });
 
 // controller to return channels list to which user has subscribed
 
-const getSubscribedChannels = asyncHandler(async () => {
+const getSubscribedChannels = asyncHandler(async (req, res) => {
   const { subscriberId } = req.params;
 });
 export { toggleSubscription, getUserChannelSubscribers, getSubscribedChannels };
