@@ -62,13 +62,13 @@ const getUserChannelSubscribers = asyncHandler(async (req, res) => {
     },
     {
       $project: {
-        username: 1,
-        fullName: 1,
-        avatar: 1,
+        "userdetails.username": 1,
+        "userdetails.fullName": 1,
+        "userdetails.avatar": 1,
       },
     },
   ]);
-  console.log(subscribers);
+  console.log(subscribers[0]);
   res
     .status(200)
     .json(new ApiResponse(200, subscribers[0], "List of channel subscribers"));
