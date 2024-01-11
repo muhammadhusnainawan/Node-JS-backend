@@ -11,17 +11,26 @@ const toggleSubscription = asyncHandler(async (req, res) => {
     throw new ApiError(400, "Channel id not found");
   }
   console.log(channelId);
-  const isSubscribed = Subscription.findOne({
-    $and: [{ subscriber: req.user?._id }, { channel: channelId }],
-  });
-  console.log(isSubscribed._id);
+  const isSubscribed = await Subscription.findOne({
+    $and: [
+      { subscriber: new mongoose.Types.ObjectId(req.user?._id) },
+      { channel: new mongoose.Types.ObjectId(channelId) },
+    ],
+  }).exec();
+  console.log(isSubscribed);
   if (isSubscribed) {
     await Subscription.findByIdAndDelete(isSubscribed?._id);
   } else {
-    const subscriptio = await Subscription.create({
-      subscriber: req.user?._id,
-      channel: req.params._id,
+    const subscription = await Subscription.create({
+      subscriber: new mongoose.Types.ObjectId(req.user?._id),
+      channel: new mongoose.Types.ObjectId(channelId),
     });
+    if (!subscription) {
+      throw new ApiError(
+        500,
+        "Something went wrong while subscribing a chnnel"
+      );
+    }
   }
   return res
     .status(200)
@@ -32,7 +41,37 @@ const toggleSubscription = asyncHandler(async (req, res) => {
 
 // controller to get subsribers list of channel
 const getUserChannelSubscribers = asyncHandler(async (req, res) => {
+  // count number of channels in which the user id exists
   const { channelId } = req.params;
+  if (!channelId) {
+    throw new ApiError(400, "channel id is required");
+  }
+  const subscribers = await Subscription.aggregate([
+    {
+      $match: {
+        channel: new mongoose.Types.ObjectId(channelId),
+      },
+    },
+    {
+      $lookup: {
+        from: "users",
+        localField: "channel",
+        foreignField: "_id",
+        as: "userdetails",
+      },
+    },
+    {
+      $project: {
+        username: 1,
+        fullName: 1,
+        avatar: 1,
+      },
+    },
+  ]);
+  console.log(subscribers);
+  res
+    .status(200)
+    .json(new ApiResponse(200, subscribers[0], "List of channel subscribers"));
 });
 
 // controller to return channels list to which user has subscribed
