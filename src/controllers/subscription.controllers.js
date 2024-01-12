@@ -81,8 +81,9 @@ const getUserChannelSubscribers = asyncHandler(async (req, res) => {
 
 const getSubscribedChannels = asyncHandler(async (req, res) => {
   const { channelId } = req.params;
+  console.log(channelId);
   if (!channelId) {
-    throw new ApiError(400, "Subscriber id is required");
+    throw new ApiError(400, "Channel id is required");
   }
   const channels = await Subscription.aggregate([
     {
@@ -95,7 +96,7 @@ const getSubscribedChannels = asyncHandler(async (req, res) => {
         from: "users",
         localField: "channel",
         foreignField: "_id",
-        as: "channel",
+        as: "channels",
       },
     },
     {
