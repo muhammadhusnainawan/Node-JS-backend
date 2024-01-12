@@ -42,41 +42,81 @@ const toggleSubscription = asyncHandler(async (req, res) => {
 // controller to get subsribers list of channel
 const getUserChannelSubscribers = asyncHandler(async (req, res) => {
   // count number of channels in which the user id exists
-  const { channelId } = req.params;
-  if (!channelId) {
+  const { subscriberId } = req.params;
+  if (!subscriberId) {
     throw new ApiError(400, "channel id is required");
   }
   const subscribers = await Subscription.aggregate([
     {
       $match: {
-        channel: new mongoose.Types.ObjectId(channelId),
+        channel: new mongoose.Types.ObjectId(subscriberId),
       },
     },
     {
       $lookup: {
         from: "users",
-        localField: "channel",
+        localField: "subscriber",
         foreignField: "_id",
-        as: "userdetails",
+        as: "subscribers",
       },
     },
     {
       $project: {
-        "userdetails.username": 1,
-        "userdetails.fullName": 1,
-        "userdetails.avatar": 1,
+        "subscribers.username": 1,
+        "subscribers.fullName": 1,
+        "subscribers.avatar": 1,
       },
     },
   ]);
-  console.log(subscribers[0]);
+  //console.log(subscribers);
+  if (!subscribers) {
+    throw new ApiError(400, "Channel have not any subscriber");
+  }
   res
     .status(200)
-    .json(new ApiResponse(200, subscribers[0], "List of channel subscribers"));
+    .json(new ApiResponse(200, subscribers, "List of channel subscribers"));
 });
 
 // controller to return channels list to which user has subscribed
 
 const getSubscribedChannels = asyncHandler(async (req, res) => {
-  const { subscriberId } = req.params;
+  const { channelId } = req.params;
+  if (!channelId) {
+    throw new ApiError(400, "Subscriber id is required");
+  }
+  const channels = await Subscription.aggregate([
+    {
+      $match: {
+        subscriber: new mongoose.Types.ObjectId(channelId),
+      },
+    },
+    {
+      $lookup: {
+        from: "users",
+        localField: "subscriber",
+        foreignField: "_id",
+        as: "channel",
+      },
+    },
+    {
+      $project: {
+        "channels.username": 1,
+        "channels.fullName": 1,
+        "channels.avatar": 1,
+      },
+    },
+  ]);
+  if (!channels) {
+    throw new ApiError(400, "User have not subscribeda ny channel");
+  }
+  res
+    .status(200)
+    .json(
+      new ApiResponse(
+        200,
+        channels,
+        "user subscribed channels fetched successfully"
+      )
+    );
 });
 export { toggleSubscription, getUserChannelSubscribers, getSubscribedChannels };
