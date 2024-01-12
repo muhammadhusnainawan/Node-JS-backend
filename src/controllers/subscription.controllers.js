@@ -108,7 +108,7 @@ const getSubscribedChannels = asyncHandler(async (req, res) => {
     },
   ]);
   if (!channels) {
-    throw new ApiError(400, "User have not subscribeda ny channel");
+    throw new ApiError(400, "User have not subscribed ny channel");
   }
   res
     .status(200)
