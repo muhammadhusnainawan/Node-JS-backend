@@ -46,6 +46,10 @@ const publishAVideo = asyncHandler(async (req, res) => {
   if (!video) {
     throw new ApiError(500, "Something went wrong while publishing video");
   }
+ 
+  res
+  .status(200)
+  .json(new ApiResponse(200, video, "Video published successfully"))
 });
 
 export { getAllVideos, publishAVideo };
