@@ -7,15 +7,16 @@ cloudinary.config({
   api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 // console.log("process is",process.env);
-const uploadOnCloudinary = async (localFilePath) => {
+const uploadOnCloudinary = async (localFilePath, folderName) => {
   try {
     if (!localFilePath) return null;
     // upload on cloudinary
     const response = await cloudinary.uploader.upload(localFilePath, {
       resource_type: "auto",
+      folder: folderName,
     });
     // file has been uploaded successfully
-     console.log("file is uploaded on cloudinary", response);
+    console.log("file is uploaded on cloudinary", response);
     fs.unlinkSync(localFilePath);
     return response;
   } catch (error) {
@@ -37,7 +38,5 @@ const delFromCloudinary = async (id) => {
     throw new ApiError(500, error.message || "Error while deleting");
   }
 };
-
-
 
 export { uploadOnCloudinary, delFromCloudinary };
