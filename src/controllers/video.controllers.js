@@ -22,17 +22,24 @@ const publishAVideo = asyncHandler(async (req, res) => {
   if ([title, description].some((field) => field?.trim() === "")) {
     throw new ApiError(400, "All fields are required");
   }
+  console.log(req.files);
   const thumbnailLocalPath = req.files?.thumbnail[0]?.path;
   if (!thumbnailLocalPath) {
     throw new ApiError(400, "Thumbnail file is required");
   }
-  const videoLocalPath = req.files?.video[0]?.path;
+  const videoLocalPath = req.files?.videoFile[0]?.path;
   if (!videoLocalPath) {
     throw new ApiError(400, "video file is required");
   }
 
-  const thumbnail = await uploadOnCloudinary(thumbnailLocalPath);
-  const videoFile = await uploadOnCloudinary(videoLocalPath);
+  const thumbnail = await uploadOnCloudinary(thumbnailLocalPath,process.env.THUMBNAIL_FOLDER_NAME);
+  if (!thumbnail) {
+    throw new ApiError(500, "Error while uploading thumbnail");
+  }
+  const videoFile = await uploadOnCloudinary(videoLocalPath,process.env.VIDEOS_FOLDER_NAME);
+  if (!videoFile) {
+    throw new ApiError(500, "Error while uploading video file");
+  }
 
   const video = await Video.create({
     videoFile: videoFile.url,
@@ -40,16 +47,16 @@ const publishAVideo = asyncHandler(async (req, res) => {
     title: title.trim(),
     description: description.trim(),
     owner: req.user?._id,
-    duration: Math.round(videoFile.duration),
+     duration: Math.round(videoFile.duration),
     isPublished,
   });
   if (!video) {
     throw new ApiError(500, "Something went wrong while publishing video");
   }
- 
+
   res
-  .status(200)
-  .json(new ApiResponse(200, video, "Video published successfully"))
+    .status(200)
+    .json(new ApiResponse(200, video, "Video published successfully"));
 });
 
 export { getAllVideos, publishAVideo };
