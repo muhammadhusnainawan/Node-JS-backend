@@ -65,4 +65,14 @@ const publishAVideo = asyncHandler(async (req, res) => {
     .json(new ApiResponse(200, video, "Video published successfully"));
 });
 
-export { getAllVideos, publishAVideo };
+const getVideoById = asyncHandler(async () => {
+  const { videoId } = req.params;
+  // get video by id
+});
+
+const updateVideo = asyncHandler(async () => {
+  const { videoId } = req.params;
+  // update video details
+});
+
+export { getAllVideos, publishAVideo, getVideoById, updateVideo };
