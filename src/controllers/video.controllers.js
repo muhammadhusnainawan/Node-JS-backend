@@ -8,6 +8,25 @@ import { uploadOnCloudinary, delFromCloudinary } from "../utils/cloudinary.js";
 const getAllVideos = asyncHandler(async () => {
   const { page = 1, limit = 10, query, sortBy, sortType, userid } = req.query;
   //TODO : get all videos based on query, sort, pagination
+  const pipeline = []
+  if (query) {
+    pipeline.push(
+      {
+        $search:{
+          index: "search-videos",
+          text:{
+            query: query,
+            path: ["title", "description"]
+          }
+        }
+      }
+    )
+  }
+  if (userid) {
+    if (!isValidObjectId) {
+      throw new ApiError(400, "Invalid userId")
+    }
+  }
 });
 
 const publishAVideo = asyncHandler(async (req, res) => {
