@@ -5,28 +5,61 @@ import { ApiError } from "../utils/ApiError.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { uploadOnCloudinary, delFromCloudinary } from "../utils/cloudinary.js";
 
-const getAllVideos = asyncHandler(async () => {
+const getAllVideos = asyncHandler(async (req,res) => {
   const { page = 1, limit = 10, query, sortBy, sortType, userid } = req.query;
   //TODO : get all videos based on query, sort, pagination
-  const pipeline = []
+  const pipeline = [];
   if (query) {
-    pipeline.push(
-      {
-        $search:{
-          index: "search-videos",
-          text:{
-            query: query,
-            path: ["title", "description"]
-          }
-        }
-      }
-    )
+    pipeline.push({
+      $search: {
+        index: "title_text",
+        text: {
+          query: query,
+          path: ["title", "description"],
+        },
+      },
+    });
   }
   if (userid) {
-    if (!isValidObjectId) {
-      throw new ApiError(400, "Invalid userId")
+    if (!isValidObjectId(userid)) {
+      throw new ApiError(400, "Invalid userId");
     }
+    pipeline.push({
+      $match: {
+        owner: new mongoose.Types.ObjectId(userid),
+      },
+    });
   }
+  // fetch videos only that are set isPublished true
+  pipeline.push({
+    $match: {
+      isPublished: true,
+    },
+  });
+  if (sortBy && sortType) {
+    pipeline.push({
+      $sort: {
+        [sortBy]: sortType === "asc" ? 1 : -1,
+      },
+    });
+  } else {
+    pipeline.push({
+      $sort: {
+        createdAt: -1,
+      },
+    });
+  }
+  const videoAggregate = Video.aggregate(pipeline);
+
+  const options = {
+    page: parseInt(page, 10),
+    limit: parseInt(limit, 10),
+  };
+  const video = await Video.aggregatePaginate(videoAggregate, options);
+
+  res
+    .status(200)
+    .json(new ApiResponse(200, video, "Videos fetched successfully"));
 });
 
 const publishAVideo = asyncHandler(async (req, res) => {
