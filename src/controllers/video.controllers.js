@@ -20,7 +20,6 @@ const getAllVideos = asyncHandler(async (req, res) => {
       },
     });
   }
-  console.log("Pipeline after matching query is", pipeline);
   if (userid) {
     if (!isValidObjectId(userid)) {
       throw new ApiError(400, "Invalid userId");
@@ -31,14 +30,12 @@ const getAllVideos = asyncHandler(async (req, res) => {
       },
     });
   }
-  console.log("Pipeline after matching user is", pipeline[0]);
   // fetch videos only that are set isPublished true
   pipeline.push({
     $match: {
       isPublished: true,
     },
   });
-  console.log("Pipeline after matching is published is", pipeline);
   if (sortBy && sortType) {
     pipeline.push({
       $sort: {
@@ -52,15 +49,15 @@ const getAllVideos = asyncHandler(async (req, res) => {
       },
     });
   }
-  console.log("Pipeline after sort is", pipeline);
+  console.log(pipeline);
   const videoAggregate = Video.aggregate(pipeline);
-  console.log("video aggregate is", videoAggregate._pipeline[0]);
 
   const options = {
     page: parseInt(page, 10),
     limit: parseInt(limit, 10),
   };
   const video = await Video.aggregatePaginate(videoAggregate, options);
+  console.log("video is", video);
 
   res
     .status(200)
@@ -122,9 +119,25 @@ const publishAVideo = asyncHandler(async (req, res) => {
     .json(new ApiResponse(200, video, "Video published successfully"));
 });
 
-const getVideoById = asyncHandler(async () => {
+const getVideoById = asyncHandler(async (req,res) => {
   const { videoId } = req.params;
   // get video by id
+  const video = await Video.aggregate([
+    {
+      $match: {
+        _id: new mongoose.Types.ObjectId(videoId),
+      },
+    },
+   {
+    $project:{
+      "videoFile.url": 1
+    }
+   }
+  ]);
+  console.log(video);
+  res
+    .status(200)
+    .json(new ApiResponse(200, video[0], "video fetched successfully"));
 });
 
 const updateVideo = asyncHandler(async () => {
