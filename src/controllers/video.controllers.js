@@ -119,7 +119,7 @@ const publishAVideo = asyncHandler(async (req, res) => {
     .json(new ApiResponse(200, video, "Video published successfully"));
 });
 
-const getVideoById = asyncHandler(async (req,res) => {
+const getVideoById = asyncHandler(async (req, res) => {
   const { videoId } = req.params;
   // get video by id
   const video = await Video.aggregate([
@@ -128,11 +128,58 @@ const getVideoById = asyncHandler(async (req,res) => {
         _id: new mongoose.Types.ObjectId(videoId),
       },
     },
-   {
-    $project:{
-      "videoFile.url": 1
-    }
-   }
+    {
+      $lookup: {
+        from: "users",
+        localField: "owner",
+        foreignField: "_id",
+        as: "owner",
+        pipeline: [
+          {
+            $lookup: {
+              from: "subscriptions",
+              localField: "_id",
+              foreignField: "channel",
+              as: "subscribers",
+            },
+          },
+          {
+            $addFields: {
+              subscribersCount: {
+                $size: "$subscribers",
+              },
+              isSubscribed: {
+                $cond: {
+                  if: {
+                    $in: [req.user?._id, "$subcribers.subscriber"],
+                  },
+                  then: true,
+                  else: false,
+                },
+              },
+            },
+          },
+          {
+            $project: {
+              username: 1,
+              fullName: 1,
+              avatar: 1,
+              subscribersCount,
+              isSubscribed,
+            },
+          },
+        ],
+      },
+    },
+    {
+      $project: {
+        videoFile: 1,
+        title: 1,
+        thumbnail: 1,
+        description: 1,
+        views: 1,
+      },
+    },
   ]);
   console.log(video);
   res
