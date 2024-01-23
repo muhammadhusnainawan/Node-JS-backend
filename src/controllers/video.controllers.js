@@ -121,6 +121,9 @@ const publishAVideo = asyncHandler(async (req, res) => {
 
 const getVideoById = asyncHandler(async (req, res) => {
   const { videoId } = req.params;
+  if(!isValidObjectId(videoId)){
+    throw new ApiError(400,"Invalid Video Id")
+  }
   // get video by id
   const video = await Video.aggregate([
     {
@@ -151,7 +154,7 @@ const getVideoById = asyncHandler(async (req, res) => {
               isSubscribed: {
                 $cond: {
                   if: {
-                    $in: [req.user?._id, "$subcribers.subscriber"],
+                    $in: [req.user?._id, "$subscribers.subscriber"],
                   },
                   then: true,
                   else: false,
@@ -164,11 +167,38 @@ const getVideoById = asyncHandler(async (req, res) => {
               username: 1,
               fullName: 1,
               avatar: 1,
-              subscribersCount,
-              isSubscribed,
+              subscribersCount:1,
+              isSubscribed: 1,
             },
           },
         ],
+      },
+    },
+    {
+      $lookup: {
+        from: "likes",
+        localField: "_id",
+        foreignField: "video",
+        as: "likes",
+      },
+    },
+    {
+      $addFields: {
+        likesCount: {
+          $size: "$likes",
+        },
+        owner: {
+          $first: "$owner",
+        },
+        isLiked: {
+          $cond: {
+            if: {
+              $in: [req.user?._id, "$likes.likedBy"],
+            },
+            then: true,
+            else: false,
+          },
+        },
       },
     },
     {
@@ -178,9 +208,15 @@ const getVideoById = asyncHandler(async (req, res) => {
         thumbnail: 1,
         description: 1,
         views: 1,
+        likesCount:1,
+        owner:1,
+        isLiked:1,
       },
     },
   ]);
+  if (!video) {
+    throw new ApiError(500, " Something went wrong while fetching the video")
+  }
   console.log(video);
   res
     .status(200)
