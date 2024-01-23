@@ -242,7 +242,7 @@ const getVideoById = asyncHandler(async (req, res) => {
     .json(new ApiResponse(200, video[0], "video fetched successfully"));
 });
 
-const updateVideoDetails = asyncHandler(async (req, res) => {
+const updateVideo = asyncHandler(async (req, res) => {
   const { videoId } = req.params;
   const { title, description, isPublished } = req.body;
   // update video details
@@ -265,28 +265,49 @@ const updateVideoDetails = asyncHandler(async (req, res) => {
   if (video.owner?.toString() !== req.user?._id) {
     throw new ApiError(400, "Unauthorized request of editing video");
   }
+  const thumbnailLocalPath = req.file?.path;
+  if (!thumbnailLocalPath) {
+    throw new ApiError(400, "Thumbnail file is required");
+  }
+  const thumbnail = await uploadOnCloudinary(
+    thumbnailLocalPath,
+    process.env.THUMBNAIL_FOLDER_NAME
+  );
+  const thumbnailToDelete = video.thumbnail?.public_id;
 
-  const updateVideoDetails = Video.findByIdAndUpdate(
+  if (!thumbnail) {
+    throw new ApiError(400, "thumbnail not found");
+  }
+
+  const updateVideo = await Video.findByIdAndUpdate(
     videoId,
     {
       $set: {
         title,
         description,
         isPublished,
+        thumbnail: {
+          publicId: thumbnail.public_id,
+          url: thumbnail.url,
+        },
       },
     },
     {
       new: true,
     }
   );
-  if (!updateVideoDetails) {
+  if (!updateVideo) {
     throw new ApiError(500, "Failed to update the video please try again");
+  }
+  if (updateVideo) {
+    await delFromCloudinary(
+      thumbnailToDelete,
+      process.env.THUMBNAIL_FOLDER_NAME
+    );
   }
   res
     .status(200)
-    .json(
-      new ApiResponse(200, updateVideoDetails, "Video updated Succesfully")
-    );
+    .json(new ApiResponse(200, updateVideo, "Video updated Succesfully"));
 });
 
-export { getAllVideos, publishAVideo, getVideoById, updateVideoDetails };
+export { getAllVideos, publishAVideo, getVideoById, updateVideo };
