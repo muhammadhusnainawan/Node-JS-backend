@@ -28,9 +28,10 @@ const uploadOnCloudinary = async (localFilePath, folderName) => {
 
 const delFromCloudinary = async (id) => {
   try {
-    const response = await cloudinary.delete_resources([id], {
+    const response = await cloudinary.delete_resources([id], folderName, {
       type: "upload",
-      resource_type: "image",
+      resource_type: "auto",
+      folder: folderName
     });
 
     return response;
