@@ -1,5 +1,6 @@
 import mongoose, { isValidObjectId } from "mongoose";
 import { Video } from "../models/video.models.js";
+import { User } from "../models/user.models.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import { ApiError } from "../utils/ApiError.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
@@ -102,8 +103,8 @@ const publishAVideo = asyncHandler(async (req, res) => {
   }
 
   const video = await Video.create({
-    videoFile: videoFile.url,
-    thumbnail: thumbnail.url,
+    videoFile: { publicId: videoFile?.public_id, url: videoFile?.url },
+    thumbnail: { publicId: thumbnail?.public_id, url: thumbnail?.url },
     title: title.trim(),
     description: description.trim(),
     owner: req.user?._id,
@@ -121,8 +122,8 @@ const publishAVideo = asyncHandler(async (req, res) => {
 
 const getVideoById = asyncHandler(async (req, res) => {
   const { videoId } = req.params;
-  if(!isValidObjectId(videoId)){
-    throw new ApiError(400,"Invalid Video Id")
+  if (!isValidObjectId(videoId)) {
+    throw new ApiError(400, "Invalid Video Id");
   }
   // get video by id
   const video = await Video.aggregate([
@@ -167,7 +168,7 @@ const getVideoById = asyncHandler(async (req, res) => {
               username: 1,
               fullName: 1,
               avatar: 1,
-              subscribersCount:1,
+              subscribersCount: 1,
               isSubscribed: 1,
             },
           },
@@ -208,24 +209,84 @@ const getVideoById = asyncHandler(async (req, res) => {
         thumbnail: 1,
         description: 1,
         views: 1,
-        likesCount:1,
-        owner:1,
-        isLiked:1,
+        likesCount: 1,
+        owner: 1,
+        isLiked: 1,
       },
     },
   ]);
   if (!video) {
-    throw new ApiError(500, " Something went wrong while fetching the video")
+    throw new ApiError(500, " Something went wrong while fetching the video");
   }
-  console.log(video);
+
+  // if video object fetched successfully then update the view
+  if (video) {
+    await Video.findByIdAndUpdate(videoId, {
+      $inc: {
+        views: 1,
+      },
+    });
+  }
+  // if vieofetched succssfully set to watch history
+  if (video) {
+    await User.findByIdAndUpdate(req.user?._id, {
+      $addToSet: {
+        watchHistory: videoId,
+      },
+    });
+  }
+
+  //console.log(video);
   res
     .status(200)
     .json(new ApiResponse(200, video[0], "video fetched successfully"));
 });
 
-const updateVideo = asyncHandler(async () => {
+const updateVideoDetails = asyncHandler(async (req, res) => {
   const { videoId } = req.params;
+  const { title, description, isPublished } = req.body;
   // update video details
+  if (!isValidObjectId(videoId)) {
+    throw new ApiError(400, "Invalid video Id");
+  }
+
+  if ([title, description, isPublished].some((field) => field.trime() === "")) {
+    throw new ApiError(
+      400,
+      "All fields i.e title and description are required"
+    );
+  }
+  const video = await Video.findById(videoId);
+
+  if (!video) {
+    throw new ApiError(404, "Video not found");
+  }
+
+  if (video.owner?.toString() !== req.user?._id) {
+    throw new ApiError(400, "Unauthorized request of editing video");
+  }
+
+  const updateVideoDetails = Video.findByIdAndUpdate(
+    videoId,
+    {
+      $set: {
+        title,
+        description,
+        isPublished,
+      },
+    },
+    {
+      new: true,
+    }
+  );
+  if (!updateVideoDetails) {
+    throw new ApiError(500, "Failed to update the video please try again");
+  }
+  res
+    .status(200)
+    .json(
+      new ApiResponse(200, updateVideoDetails, "Video updated Succesfully")
+    );
 });
 
-export { getAllVideos, publishAVideo, getVideoById, updateVideo };
+export { getAllVideos, publishAVideo, getVideoById, updateVideoDetails };
