@@ -333,9 +333,57 @@ const deleteVideo = asyncHandler(async (req, res) => {
   if (videoDeleted) {
     await delFromCloudinary(videoToDelete, process.env.VIDEOS_FOLDER_NAME);
   }
-  res
-  .status(200)
-  .json(new ApiResponse(200, {}, "Video deleted successfully"));
+  res.status(200).json(new ApiResponse(200, {}, "Video deleted successfully"));
 });
 
-export { getAllVideos, publishAVideo, getVideoById, updateVideo, deleteVideo };
+const togglePublishStatus = asyncHandler(async (req, res) => {
+  const { videoId } = req.params;
+  // check is video id is vlid object id other wise throw error
+  // req video document from db on base of of id if not thro error
+  // check login user is authorized if not throw error
+  // find and update update video.isPublished !=isPublished
+  // send updated isPublished status response to client
+  if (!isValidObjectId(videoId)) {
+    throw new ApiError(400, "Invalid video id");
+  }
+  const video = await Video.findById(videoId);
+  if (!video) {
+    throw new ApiError(404, "Video not found");
+  }
+  // step 3
+  if (video.owner.toString() !== req.user?._id) {
+    throw new ApiError(400, "Unauthorized request, user cant update video");
+  }
+  const toggledVideoPublish = Video.findByIdAndUpdate(
+    videoId,
+    {
+      $set: {
+        isPublished: !video.isPublished,
+      },
+    },
+    {
+      new: true,
+    }
+  );
+  if (!toggledVideoPublish) {
+    throw new ApiError(500, "Failed to toggle publish status");
+  }
+  res
+    .status(200)
+    .json(
+      new ApiResponse(
+        200,
+        { isPublished: toggledVideoPublish.isPublished },
+        "Video publish toggled successfully"
+      )
+    );
+});
+
+export {
+  getAllVideos,
+  publishAVideo,
+  getVideoById,
+  updateVideo,
+  deleteVideo,
+  togglePublishStatus,
+};
