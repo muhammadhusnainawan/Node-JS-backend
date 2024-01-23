@@ -5,6 +5,7 @@ import { ApiResponse } from "../utils/ApiResponse.js";
 import { ApiError } from "../utils/ApiError.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { uploadOnCloudinary, delFromCloudinary } from "../utils/cloudinary.js";
+import { json } from "express";
 
 const getAllVideos = asyncHandler(async (req, res) => {
   const { page = 1, limit = 10, query, sortBy, sortType, userid } = req.query;
@@ -310,4 +311,31 @@ const updateVideo = asyncHandler(async (req, res) => {
     .json(new ApiResponse(200, updateVideo, "Video updated Succesfully"));
 });
 
-export { getAllVideos, publishAVideo, getVideoById, updateVideo };
+const deleteVideo = asyncHandler(async (req, res) => {
+  const { videoId } = req.params;
+  // check valid video Id if not throw error
+  // verify user is authorized if not throw error
+  // req db for document and delete from db
+  // delete from cloudnary
+  // send res to client
+  if (!isValidObjectId(videoId)) {
+    throw new ApiError(400, "Inavlid video Id");
+  }
+  const video = await Video.findById(videoId);
+  const videoToDelete = video.videoFile?.publicId;
+  if (video.owner?._id !== req.user?._id) {
+    throw new ApiError(400, "User is not auhtorized to delete the video");
+  }
+  const videoDeleted = await Video.findByIdAndDelete(video._id);
+  if (!videoDeleted) {
+    throw new ApiError(500, "Video not deleted please try again");
+  }
+  if (videoDeleted) {
+    await delFromCloudinary(videoToDelete, process.env.VIDEOS_FOLDER_NAME);
+  }
+  res
+  .status(200)
+  .json(new ApiResponse(200, {}, "Video deleted successfully"));
+});
+
+export { getAllVideos, publishAVideo, getVideoById, updateVideo, deleteVideo };
