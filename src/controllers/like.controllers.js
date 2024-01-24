@@ -1,4 +1,4 @@
-import mongoose, { isValidObjectId } from "mongoose";
+import mongoose, { isValidObjectId, mongo } from "mongoose";
 import { Like } from "../models/like.models.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
@@ -86,4 +86,40 @@ const toggleCommentLike = asyncHandler(async (req, res) => {
     );
 });
 
-export { toggleVideoLike,toggleCommentLike };
+const toggleTweetLike = asyncHandler(async (req, res) => {
+  const { tweetId } = req.params;
+  if (!isValidObjectId(tweetId)) {
+    throw new ApiError(400, "Invalid tweet id");
+  }
+  const isTweetLiked = await Like.findOne({
+    $and: [
+      { tweet: new mongoose.Types.ObjectId(tweetId) },
+      { likedBy: new mongoose.Types.ObjectId(req.user?._id) },
+    ],
+  });
+  let like;
+  if (isTweetLiked) {
+    await Like.findByIdAndDelete(isTweetLiked?._id);
+    like = false;
+  } else {
+    const tweetLiked = await Like.create({
+      tweet: new mongoose.Types.ObjectId(tweetId),
+      likedBy: new mongoose.Types.ObjectId(req.user?._id),
+    });
+    if (!tweetLiked) {
+      throw new ApiError(500, "Tweet is not liked Please try again");
+    }
+    like = true;
+  }
+  res
+    .status(200)
+    .json(
+      new ApiResponse(
+        200,
+        {},
+        like ? "Tweet liked successfully" : "Tweet unliked successfully"
+      )
+    );
+});
+
+export { toggleVideoLike, toggleCommentLike,toggleTweetLike };
