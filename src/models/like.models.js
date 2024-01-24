@@ -11,6 +11,10 @@ const likeSchema = Schema(
       type: mongoose.Types.ObjectId,
       ref: "Video",
     },
+    tweet: {
+      type: Schema.Types.ObjectId,
+      ref: "Tweet"
+  },
     likedBy: {
       type: mongoose.Types.ObjectId,
       ref: "User",
