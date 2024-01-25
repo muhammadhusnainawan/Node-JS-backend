@@ -1,7 +1,7 @@
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { ApiError } from "../utils/ApiError.js";
 import { User } from "../models/user.models.js";
-import { delFromCloudinary, uploadOnCloudinary } from "../utils/cloudinary.js";
+import { deleteFromCloudinary, uploadOnCloudinary } from "../utils/cloudinary.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import jwt from "jsonwebtoken";
 import mongoose from "mongoose";
@@ -275,7 +275,7 @@ const updateUserAvatar = asyncHandler(async (req, res) => {
   if (dotIndexOfidSplitted !== -1) {
     id = idSplitted.slice(0, dotIndexOfParts);
   }
-  const delOldAvatar = await delFromCloudinary(id);
+  const delOldAvatar = await deleteFromCloudinary(id);
   const user = await User.findByIdAndUpdate(
     req.user?._id,
     {
@@ -309,7 +309,7 @@ const updateUserCoverImage = asyncHandler(async (req, res) => {
     if (dotIndexOfidSplitted !== -1) {
       id = idSplitted.slice(0, dotIndexOfParts);
     }
-    const delOldCoverImage = await delFromCloudinary(id);
+    const delOldCoverImage = await deleteFromCloudinary(id);
   }
 
   const user = await User.findByIdAndUpdate(
