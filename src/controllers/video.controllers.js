@@ -382,20 +382,21 @@ const togglePublishStatus = asyncHandler(async (req, res) => {
     throw new ApiError(404, "Video not found");
   }
   // step 3
-  if (video.owner.toString() !== req.user?._id) {
+  if (video.owner.toString() !== req.user?._id.toString()) {
     throw new ApiError(400, "Unauthorized request, user cant update video");
   }
-  const toggledVideoPublish = Video.findByIdAndUpdate(
+  const toggledVideoPublish = await Video.findByIdAndUpdate(
     videoId,
     {
       $set: {
-        isPublished: !video.isPublished,
+        isPublished: !video?.isPublished,
       },
     },
     {
       new: true,
     }
   );
+ // console.log(toggledVideoPublish);
   if (!toggledVideoPublish) {
     throw new ApiError(500, "Failed to toggle publish status");
   }
