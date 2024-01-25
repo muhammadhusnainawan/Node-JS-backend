@@ -6,14 +6,14 @@ const videoSchema = new Schema(
     videoFile: {
       type: {
         url: String, // Cloudinary URl
-        public_id: String,
+        _id: String,
       },
       required: true,
     },
     thumbnail: {
       type: {
         url: String, // Cloudinary URl
-        public_id: String,
+        _id: String,
       },
       required: true,
     },
