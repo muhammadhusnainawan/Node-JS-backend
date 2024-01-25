@@ -1,5 +1,6 @@
 import { v2 as cloudinary } from "cloudinary";
 import fs from "fs";
+import { ApiError } from "../utils/ApiError.js";
 
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
@@ -26,19 +27,17 @@ const uploadOnCloudinary = async (localFilePath, folderName) => {
   }
 };
 
-const delFromCloudinary = async (id) => {
+const deleteFromCloudinary = async (id,resource_type) => {
   try {
-    if (!id) return null 
-    const response = await cloudinary.delete_resources([id], folderName, {
+    if (!id && resource_type) return null;
+    const response = await cloudinary.api.delete_resources([id], {
       type: "upload",
-      resource_type: "auto",
-      folder: folderName
+      resource_type: resource_type
     });
-
-    return response;
+    return response
   } catch (error) {
-    throw new ApiError(500, error.message || "Error while deleting");
+    console.log(error);
   }
 };
 
-export { uploadOnCloudinary, delFromCloudinary };
+export { uploadOnCloudinary, deleteFromCloudinary };
