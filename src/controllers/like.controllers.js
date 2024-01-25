@@ -122,4 +122,9 @@ const toggleTweetLike = asyncHandler(async (req, res) => {
     );
 });
 
-export { toggleVideoLike, toggleCommentLike,toggleTweetLike };
+const getLikedVideos =  asyncHandler( async(req,res)=>{
+    // TODO get all liked videos
+} )
+
+
+export { toggleVideoLike, toggleCommentLike,toggleTweetLike,getLikedVideos };
