@@ -1,4 +1,4 @@
-import mongoose, { isValidObjectId } from "mongoose";
+import mongoose, { isValidObjectId, mongo } from "mongoose";
 import { Video } from "../models/video.models.js";
 import { User } from "../models/user.models.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
@@ -92,25 +92,33 @@ const publishAVideo = asyncHandler(async (req, res) => {
     process.env.THUMBNAIL_FOLDER_NAME
   );
   if (!thumbnail) {
-    throw new ApiError(500, "Error while uploading thumbnail");
+    throw new ApiError(502, "Error while uploading thumbnail");
   }
   const videoFile = await uploadOnCloudinary(
     videoLocalPath,
     process.env.VIDEOS_FOLDER_NAME
   );
+  console.log("public id is", videoFile?.public_id);
   if (!videoFile) {
-    throw new ApiError(500, "Error while uploading video file");
+    throw new ApiError(502, "Error while uploading video file");
   }
 
   const video = await Video.create({
-    videoFile: { publicId: videoFile?.public_id, url: videoFile?.url },
-    thumbnail: { publicId: thumbnail?.public_id, url: thumbnail?.url },
+    videoFile: {
+      _id: videoFile?.public_id,
+      url: videoFile?.url,
+    },
+    thumbnail: {
+      _id: thumbnail?.public_id,
+      url: thumbnail?.url,
+    },
     title: title.trim(),
     description: description.trim(),
     owner: req.user?._id,
     duration: Math.round(videoFile.duration),
     isPublished,
   });
+  console.log(video);
   if (!video) {
     throw new ApiError(500, "Something went wrong while publishing video");
   }
@@ -250,7 +258,7 @@ const updateVideo = asyncHandler(async (req, res) => {
     throw new ApiError(400, "Invalid video Id");
   }
 
-  if ([title, description, isPublished].some((field) => field.trime() === "")) {
+  if ([title, description, isPublished].some((field) => field.trim() === "")) {
     throw new ApiError(
       400,
       "All fields i.e title and description are required"
@@ -261,10 +269,12 @@ const updateVideo = asyncHandler(async (req, res) => {
   if (!video) {
     throw new ApiError(404, "Video not found");
   }
-
-  if (video.owner?.toString() !== req.user?._id) {
+  console.log("video.owner.id is", video.owner?.toString());
+  console.log("req.user.id is", req.user?._id.toString());
+  if (video.owner?.toString() !== req.user?._id.toString()) {
     throw new ApiError(400, "Unauthorized request of editing video");
   }
+
   const thumbnailLocalPath = req.file?.path;
   if (!thumbnailLocalPath) {
     throw new ApiError(400, "Thumbnail file is required");
@@ -322,7 +332,7 @@ const deleteVideo = asyncHandler(async (req, res) => {
   }
   const video = await Video.findById(videoId);
   const videoToDelete = video.videoFile?.publicId;
-  if (video.owner?._id !== req.user?._id) {
+  if (video.owner?._id.toString() !== req.user?._id.toString()) {
     throw new ApiError(400, "User is not auhtorized to delete the video");
   }
   const videoDeleted = await Video.findByIdAndDelete(video._id);
