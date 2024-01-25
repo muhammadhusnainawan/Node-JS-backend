@@ -40,8 +40,8 @@ const toggleVideoLike = asyncHandler(async (req, res) => {
         200,
         {},
         like
-          ? "User liked the video successfully"
-          : "User unlike the video successfully"
+          ? `${req.user?.username} liked the video successfully`
+          : `${req.user?.username} un-like the video successfully`
       )
     );
 });
@@ -122,9 +122,51 @@ const toggleTweetLike = asyncHandler(async (req, res) => {
     );
 });
 
-const getLikedVideos =  asyncHandler( async(req,res)=>{
-    // TODO get all liked videos
-} )
+const getLikedVideos = asyncHandler(async (req, res) => {
+  // TODO get all liked videos
+  const likedvideos = await Like.aggregate([
+    {
+      $match: {
+        likedBy: new mongoose.Types.ObjectId(req.user?._id),
+      },
+    },
+    {
+      $lookup: {
+        from: "videos",
+        localField: "video",
+        foreignField: "_id",
+        as: "likedVideos",
+        pipeline: [
+          {
+            $lookup: {
+              from: "users",
+              localField: "owner",
+              foreignField: "_id",
+              as: "ownerDetails",
+            },
+          },
+          {
+            $project: {
+              username: 1,
+              avatar: 1,
+            },
+          },
+        ],
+      },
+    },
+    {
+      $project: {
+        owner: 1,
+        videoFile: 1,
+      },
+    },
+  ]);
+  console.log("liked videos", likedvideos);
+  res
+    .status(200)
+    .json(
+      new ApiResponse(200, likedvideos, "liked videos fetched successfully")
+    );
+});
 
-
-export { toggleVideoLike, toggleCommentLike,toggleTweetLike,getLikedVideos };
+export { toggleVideoLike, toggleCommentLike, toggleTweetLike, getLikedVideos };
