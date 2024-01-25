@@ -4,7 +4,10 @@ import { User } from "../models/user.models.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import { ApiError } from "../utils/ApiError.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
-import { uploadOnCloudinary, delFromCloudinary } from "../utils/cloudinary.js";
+import {
+  uploadOnCloudinary,
+  deleteFromCloudinary,
+} from "../utils/cloudinary.js";
 
 const getAllVideos = asyncHandler(async (req, res) => {
   const { page = 1, limit = 10, query, sortBy, sortType, userid } = req.query;
@@ -107,10 +110,12 @@ const publishAVideo = asyncHandler(async (req, res) => {
     videoFile: {
       _id: videoFile?.public_id,
       url: videoFile?.url,
+      resource_type: videoFile?.resource_type,
     },
     thumbnail: {
       _id: thumbnail?.public_id,
       url: thumbnail?.url,
+      resource_type: thumbnail?.resource_type,
     },
     title: title.trim(),
     description: description.trim(),
@@ -331,7 +336,10 @@ const deleteVideo = asyncHandler(async (req, res) => {
     throw new ApiError(400, "Inavlid video Id");
   }
   const video = await Video.findById(videoId);
-  const videoToDelete = video.videoFile?.publicId;
+  const videoToDelete = video.videoFile?._id;
+  const videoResourcetype = video.videoFile?.resource_type;
+  const thumbnailToDelete = video.thumbnail?._id;
+  const thumbnailResourceType = video.thumbnail?.resource_type;
   if (video.owner?._id.toString() !== req.user?._id.toString()) {
     throw new ApiError(400, "User is not auhtorized to delete the video");
   }
@@ -340,7 +348,21 @@ const deleteVideo = asyncHandler(async (req, res) => {
     throw new ApiError(500, "Video not deleted please try again");
   }
   if (videoDeleted) {
-    await delFromCloudinary(videoToDelete, process.env.VIDEOS_FOLDER_NAME);
+    const videoToDeleteFromCloud = await deleteFromCloudinary(
+      videoToDelete,
+      videoResourcetype
+    );
+   // console.log("videoToDeleteFromCloud", videoToDeleteFromCloud);
+    if (!videoToDeleteFromCloud.deleted) {
+      throw new ApiError(502, "video not deleted from cloud");
+    }
+    const thumbnailToDeleteFromCloud = await deleteFromCloudinary(
+      thumbnailToDelete,
+      thumbnailResourceType
+    );
+    if (!thumbnailToDeleteFromCloud.deleted) {
+      throw new ApiError(502, "thumbnail not deleted from cloud");
+    }
   }
   res.status(200).json(new ApiResponse(200, {}, "Video deleted successfully"));
 });
