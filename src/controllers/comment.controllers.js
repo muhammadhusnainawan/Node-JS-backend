@@ -6,10 +6,10 @@ import { ApiError } from "../utils/ApiError.js";
 
 const getVideoComments = asyncHandler(async (req, res) => {
   // get all comment of a video
-  const videoId = req.params;
+  const { videoId } = req.params;
   const { page = 1, limit = 10 } = req.query;
 
-  const commentaggregate = Comment.aggregate([
+  const commentaggregate = await Comment.aggregate([
     {
       $match: {
         video: new mongoose.Types.ObjectId(videoId),
@@ -31,7 +31,54 @@ const getVideoComments = asyncHandler(async (req, res) => {
         as: "likes",
       },
     },
+    {
+      $addFields: {
+        likesCount: {
+          $size: "$likes",
+        },
+        owner: {
+          $first: "$owner",
+        },
+        isLiked: {
+          $cond: {
+            if: { $in: [req.user?._id, "$likes.likedBy"] },
+            then: true,
+            else: false,
+          },
+        },
+      },
+    },
+    {
+      $project: {
+        content: 1,
+        createdAt: 1,
+        owner: {
+          username: 1,
+          avatar: 1,
+        },
+        likesCount: 1,
+        isLiked: 1,
+      },
+    },
   ]);
+  if (!commentaggregate) {
+    throw new ApiError(500, " Comment not found try again");
+  }
+  console.log(commentaggregate[0]);
+  const options = {
+    page: parseInt(page, 10),
+    limit: parseInt(limit, 10),
+  };
+  const comments = await Comment.aggregatePaginate(commentaggregate[0], options);
+  res
+    .status(200)
+    .json(
+      new ApiResponse(
+        200,
+        comments,
+        "Video comments fetched successfully"
+      )
+    );
 });
 
 const addComment = asyncHandler(async (req, res) => {
@@ -57,4 +104,4 @@ const addComment = asyncHandler(async (req, res) => {
     .json(new ApiResponse(200, comment, "Comment created successfully"));
 });
 
-export { getVideoComments,addComment };
+export { getVideoComments, addComment };
