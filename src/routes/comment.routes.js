@@ -15,7 +15,7 @@ router.route("/:videoId")
 .post(addComment);
 
 router.route("/c/:commentId")
+.patch(updateComment)
 .delete(deleteComment)
-.patch(updateComment);
 
 export default router;
