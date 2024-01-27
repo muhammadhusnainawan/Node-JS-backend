@@ -34,4 +34,27 @@ const getVideoComments = asyncHandler(async (req, res) => {
   ]);
 });
 
-export { getVideoComments };
+const addComment = asyncHandler(async (req, res) => {
+  const { videoId } = req.params;
+  if (!isValidObjectId(videoId)) {
+    throw new ApiError(400, "Invalid video Id");
+  }
+  const { content } = req.body;
+  if (content === "") {
+    throw new ApiError(400, "Content is required");
+  }
+
+  const comment = await Comment.create({
+    content,
+    video: new mongoose.Types.ObjectId(videoId),
+    owner: new mongoose.Types.ObjectId(req.user?._id),
+  });
+  if (!comment) {
+    throw new ApiError(500, "Comment is not posted please try again");
+  }
+  res
+    .status(200)
+    .json(new ApiResponse(200, comment, "Comment created successfully"));
+});
+
+export { getVideoComments,addComment };
