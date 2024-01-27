@@ -69,15 +69,14 @@ const getVideoComments = asyncHandler(async (req, res) => {
     page: parseInt(page, 10),
     limit: parseInt(limit, 10),
   };
-  const comments = await Comment.aggregatePaginate(commentaggregate[0], options);
+  const comments = await Comment.aggregatePaginate(
+    commentaggregate[0],
+    options
+  );
   res
     .status(200)
     .json(
-      new ApiResponse(
-        200,
-        comments,
-        "Video comments fetched successfully"
-      )
+      new ApiResponse(200, comments, "Video comments fetched successfully")
     );
 });
 
@@ -104,4 +103,58 @@ const addComment = asyncHandler(async (req, res) => {
     .json(new ApiResponse(200, comment, "Comment created successfully"));
 });
 
-export { getVideoComments, addComment };
+const updateComment = asyncHandler(async (req, res) => {
+  const { content } = req.body;
+  if (content == "") {
+    throw new ApiError(400, "Cotent is required");
+  }
+  const { commentId } = req.params;
+  if (!isValidObjectId(commentId)) {
+    throw new ApiError(400, "Invalid comment id");
+  }
+  const comment = await Comment.findById(commentId);
+  if (!comment) {
+    throw new ApiError(400, "Comment not found");
+  }
+  if (comment?.owner?._id.toString() !== req.user?._id.toString()) {
+    throw new ApiError(400, "user is not authorized to update comment");
+  }
+  const updatedComment = await Comment.findbyIdAndUpdate(
+    comment?._id,
+    {
+      $set: {
+        content,
+      },
+    },
+    {
+      new: true,
+    }
+  );
+  if (!updatedComment) {
+    throw new ApiError(500, "Comment not updated please try again");
+  }
+  res
+    .status(200)
+    .json(new ApiResponse(200, updatedComment, "Comment updated successfully"));
+});
+
+const deleteComment = asyncHandler( async(req,res)=>{
+    const {commentId} = req.params
+    if (!isValidObjectId(commentId)) {
+        throw new ApiError(400, "Invalid Comment id")
+    }
+
+    const comment = await Comment.findById(commentId)
+    if (!comment) {
+        throw new ApiError(500, "Comment not found")
+    }
+    if (comment?.owner?._id.toString() !== req?.user?._id.toString()) {
+        throw new ApiError("400", "User is not authorized to delete the comment")
+    }
+    const deletedComment = await Comment.findByIdAndDelete(comment?._id)
+    res
+    .status(200)
+    .json( new ApiResponse(200, {}, "Comment deleted successfully") )
+} )
+
+export { getVideoComments, addComment,updateComment,deleteComment };
