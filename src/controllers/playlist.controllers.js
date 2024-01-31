@@ -133,7 +133,7 @@ const removeVideoFromPlaylist = asyncHandler(async (req, res) => {
     throw new ApiError(404, "Playlist or video not found ");
   }
   if (!playlist?.videos.includes(videoId)) {
-    throw new ApiError(400, "Video not fond in playlist");
+    throw new ApiError(400, "Video not found in playlist");
   }
   const video = await Video.findById(videoId);
   if (!video) {
@@ -166,10 +166,78 @@ const removeVideoFromPlaylist = asyncHandler(async (req, res) => {
     .json(new ApiResponse(200, updatedPlaylist, "Video removed successfully"));
 });
 
+const getPlaylistById = asyncHandler(async (req, res) => {
+  const { userId } = req.params;
+  if (!isValidObjectId(userId)) {
+    throw new ApiError(400, "Invalid user id");
+  }
+
+  const playlists = await Playlist.aggreagate([
+    {
+      $match: {
+        owner: new mongoose.Types.ObjectId(userId),
+      },
+    },
+    {
+      $lookup: {
+        from: "videos",
+        localField: "videos",
+        foreignField: "_id",
+        as: "videos",
+      },
+    },
+    {
+      $match: {
+        isPublished: true,
+      },
+    },
+    {
+      $lookup: {
+        from: "users",
+        localField: "owner",
+        foreignField: "_id",
+        as: "owner",
+      },
+    },
+    {
+      $addFields:{
+        totalVideos:{
+          $size:"$videos"
+        },
+        totalViews:{
+          $sum:"$videos.views"
+        },
+        owner:{
+          $first:"$owner"
+        }
+      }
+    },
+    {
+      $project:{
+        name:1,
+        description:1,
+        createdAt:1,
+        updatedAt:1,
+        totalVideos:1,
+        totalViews:1,
+        owner:{
+          username:1,
+          fullName:1,
+          avatar:1
+        },
+        videos:{
+          
+        }
+      }
+    }
+  ]);
+});
+
 export {
   createPlaylist,
   updatePlaylist,
   deletePlaylist,
   addVideoToPlaylist,
   removeVideoFromPlaylist,
+  getPlaylistById,
 };
