@@ -20,6 +20,6 @@ router.route("/:playlistId")
 .get(getPlaylistById)
 router.route("/addVideo/:videoId/:playlistId").patch(addVideoToPlaylist)
 router.route("/delVideo/:videoId/:playlistId").patch(removeVideoFromPlaylist)
-router.route("/:userId").get(getUserPlaylists)
+router.route("/user/:userId").get(getUserPlaylists)
 
 export default router;

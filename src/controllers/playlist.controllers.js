@@ -168,11 +168,11 @@ const removeVideoFromPlaylist = asyncHandler(async (req, res) => {
 
 const getPlaylistById = asyncHandler(async (req, res) => {
   const { playlistId } = req.params;
-  if (!isValidObjectId(userId)) {
+  if (!isValidObjectId(playlistId)) {
     throw new ApiError(400, "Invalid user id");
   }
 
-  const playlist = await Playlist.aggreagate([
+  const playlist = await Playlist.aggregate([
     {
       $match: {
         _id: new mongoose.Types.ObjectId(playlistId),
@@ -239,7 +239,7 @@ const getPlaylistById = asyncHandler(async (req, res) => {
   }
   res
     .status(200)
-    .json(new ApiResponse(200, playlist[0], "Playlist fetched successfully"));
+    .json(new ApiResponse(200, playlist, "Playlist fetched successfully"));
 });
 
 const getUserPlaylists = asyncHandler(async (req, res) => {
@@ -302,7 +302,7 @@ const getUserPlaylists = asyncHandler(async (req, res) => {
   res
     .status(200)
     .json(
-      new ApiResponse(200, playlists, "Users playlists fetched successfully")
+      new ApiResponse(200, playlists, "User playlists fetched successfully")
     );
 });
 
