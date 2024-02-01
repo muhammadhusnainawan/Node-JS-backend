@@ -188,7 +188,7 @@ const getPlaylistById = asyncHandler(async (req, res) => {
     },
     {
       $match: {
-        isPublished: true,
+       "videos.isPublished": true,
       },
     },
     {
@@ -199,7 +199,7 @@ const getPlaylistById = asyncHandler(async (req, res) => {
         as: "owner",
       },
     },
-    {
+     {
       $addFields: {
         totalVideos: {
           $size: "$videos",
@@ -210,15 +210,15 @@ const getPlaylistById = asyncHandler(async (req, res) => {
         owner: {
           $first: "$owner",
         },
-      },
-    },
+       },
+     },
     {
       $project: {
         name: 1,
         description: 1,
         createdAt: 1,
         updatedAt: 1,
-        totalVideos: 1,
+       totalVideos: 1,
         totalViews: 1,
         owner: {
           username: 1,
