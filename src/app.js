@@ -15,6 +15,7 @@ app.use(express.static("public"));
 app.use(cookieParser());
 
 // routes imports
+import healthcheckRouter from "./routes/healthcheck.routes.js"
 import userRouter from "./routes/user.routes.js";
 import subscriptionRouter from "./routes/subscription.routes.js";
 import videoRouter from "./routes/video.routes.js";
@@ -25,6 +26,7 @@ import playlistRouter from "./routes/playlist.routes.js";
 import dashboardRouter from "./routes/dashboard.routes.js";
 
 // routes declaration
+app.use("/api/v1/healthcheck",healthcheckRouter )
 app.use("/api/v1/users", userRouter);
 app.use("/api/v1/subscribers", subscriptionRouter);
 app.use("/api/v1/videos", videoRouter);
